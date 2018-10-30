@@ -39,91 +39,159 @@
     </template>
 
     <template id="createUserUITemplate">
-        <form>
+
+        <form id="createUserForm">
             <label for="userName">User name:</label>
-            <input type="text" id="userName">
+            <input type="text" id="userName" required>
 
             <label for="email">E-mail:</label>
-            <input type="email" id="email">
+            <input type="email" id="email" required>
 
             <label for="password">Password:</label>
-            <input type="password" id="password">
+            <input type="password" id="password" required>
 
-            <button type="button">Create</button>
+            <button>Create</button>
         </form>
 
     </template>
 
 </body>
-    <script>
-        let authenticatedUser = null;
-        
-        (function () {
-            if (! authenticatedUser) {
-                displayLoginForm();
-            } else{
-                displaySubmitRequestForm();
+<script>
+    let authenticatedUser = null;
+    const USER_ROLE = 42;
+
+    (function () {
+        if (!authenticatedUser) {
+            displayLoginForm();
+        } else {
+            displaySubmitRequestForm();
+        }
+    })();
+
+    function addElement(element) {
+        let content = document.getElementById("content");
+        if (content) {
+            if (element) {
+                content.appendChild(element);
+            } else {
+                console.error(new Error(`The element is empty`))
             }
-        })();
+        } else {
+            console.error(new Error(`There is no content element in the document`))
+        }
+    }
 
-        function addElement(element){
-            document.getElementById("content").appendChild(element);
+    function clearScreen() {
+        document.getElementById("content").innerHTML = "";
+    }
+
+    function createElementFromTemplate(templateID) {
+        let template = document.querySelector(templateID);
+        let clone = document.importNode(template.content, true);
+        return clone
+    }
+
+    function displayLoginForm() {
+
+        let loginForm = createElementFromTemplate("#authenticateUserUITemplate")
+        //loginForm = window.document.body.appendChild(loginForm);
+        addElement(loginForm);
+
+        let loginBt = document.querySelector("#loginBt");
+        let createBt = document.querySelector("#createUserBt");
+
+        loginBt.onclick = function (evt) {
+            console.log("Login bt clicked")
+
+            let username = document.getElementById("userName").value;
+            let password = document.getElementById("password").value;
+
+            if (username.length > 1 && password.length > 1) {
+                // Time to login .....
+
+                fetch(`/app/user/${username}`).then(data => {
+                    if (data.status === 200) {
+                        return data.json()
+                    } else {
+                        return new PromiseRejectionEvent();
+                    }
+                }).then(json => {
+                    // User is logged inn.
+                    authenticatedUser = JSON.parse(json);
+                    clearScreen();
+                    displaySubmitRequestForm();
+                }).catch(err => {
+                    // Deal withn the error.
+                })
+
+            } else {
+                alert("Danger! Danger You are a hacker ;)");
+            }
+
         }
 
-        function clearScreen(){
-            document.getElementById("content").innerHTML = "";
+        createBt.onclick = function (evt) {
+            clearScreen();
+            displayCreateUserForm();
+            console.log("Create user bt clicked")
         }
 
-        function createElementFromTemplate(templateID){
-            let template = document.querySelector(templateID);
-            let clone = document.importNode(template.content, true);
-            return clone
-        }
+    }
 
-        function displayLoginForm(){
-            
-            let loginForm = createElementFromTemplate("#authenticateUserUITemplate")
-            //loginForm = window.document.body.appendChild(loginForm);
-            addElement(loginForm);
+    function displayCreateUserForm() {
+        let element = createElementFromTemplate("#createUserUITemplate")
+        window.document.body.appendChild(element);
 
-            let loginBt = document.querySelector("#loginBt");
-            let createBt = document.querySelector("#createUserBt");
+        let form = document.getElementById("createUserForm");
+        form.onsubmit = function (evt) {
+            // Stops the form from submitting
+            evt.preventDefault();
+            // Username, email and password is validated by browser :)
+            // if values are missing it is our mistake in not finding the correct element.
+            // https://developer.mozilla.org/en-US/docs/Learn/HTML/Forms/Form_validation
+            let userName = document.getElementById("userName").value;
+            let password = document.getElementById("password").value;
+            let email = document.getElementById("email").value;
+            let role = USER_ROLE;
 
-            loginBt.onclick = function(evt){
-                console.log("Login bt clicked")
-                
-                let username = document.getElementById("userName").value;
-                let password = document.getElementById("password").value;
+            fetch('/app/user',{
+                method:"POST",
+                body:JSON.stringify({
+                    name:userName,
+                    pswHash:password,
+                    userRole:role,
+                    email:email
+                }),
+                headers: {
+                    "Content-Type": "application/json; charset=utf-8"
+                },
 
-                if(username.length > 1 && password.length > 1){
-
-
-
-                } else{
-                    alert("Danger! Danger You are a hacker ;)");
+            }).then(function(data){
+                if(data.status < 400){
+                    return data.json();
                 }
-
-            }
-
-            createBt.onclick = function(evt){
-                clearScreen();
-                displayCreateUserForm();
-                console.log("Create user bt clicked")
-            }
-
-        }
-
-        function displayCreateUserForm(){
-            let element = createElementFromTemplate("#createUserUITemplate")
-            window.document.body.appendChild(element);
-           
-        }
-
-        function displaySubmitRequestForm(){
+            }).then(function(createdUser){
+                if(createdUser.id){
+                    // We have a newly created user !!
+                    clearScreen();
+                    displayLoginForm();
+                }
+            }).catch(err =>{
+                console.error(err);
+            });
 
         }
-   
-   </script>
+
+
+
+
+
+    }
+
+    function displaySubmitRequestForm() {
+
+    }
+</script>
 
 
 
